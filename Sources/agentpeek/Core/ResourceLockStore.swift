@@ -2,6 +2,8 @@ import Foundation
 
 enum LockError: Error {
     case heldBy(agentId: String, expiresIn: Int)
+    case notFound
+    case notOwned
 }
 
 struct ResourceLock: Codable {
@@ -21,6 +23,7 @@ final class ResourceLockStore {
     init() { load() }
 
     func lock(name: String, agentId: String, ttlMinutes: Int) throws {
+        guard ttlMinutes > 0 else { return }
         try queue.sync {
             pruneExpired()
             if let existing = locks[name], !existing.isExpired {
@@ -44,9 +47,13 @@ final class ResourceLockStore {
     }
 
     func renew(name: String, agentId: String, ttlMinutes: Int) throws {
+        guard ttlMinutes > 0 else { return }
         try queue.sync {
-            guard let existing = locks[name], existing.agentId == agentId, !existing.isExpired else {
-                throw LockError.heldBy(agentId: locks[name]?.agentId ?? "none", expiresIn: 0)
+            guard let existing = locks[name], !existing.isExpired else {
+                throw LockError.notFound
+            }
+            guard existing.agentId == agentId else {
+                throw LockError.notOwned
             }
             locks[name] = ResourceLock(
                 name: name,
@@ -65,8 +72,9 @@ final class ResourceLockStore {
     }
 
     private func pruneExpired() {
+        let before = locks.count
         locks = locks.filter { !$0.value.isExpired }
-        save()
+        if locks.count != before { save() }
     }
 
     private func save() {
