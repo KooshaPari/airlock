@@ -311,6 +311,143 @@ func TestLock_IdempotentRePollRetainsSlot(t *testing.T) {
 	}
 }
 
+// TestLock_ShortTTLLongWaitRetainsSlot is the regression for the waiter GC
+// horizon bug: a waiter that uses a SHORT lock ttlSeconds but a longer wait
+// window must keep its FIFO slot across the interval that the old (2×TTL)
+// horizon would have GC'd it. Previously B (ttlSeconds=2) would be reaped at
+// ~4s even though it re-polls within its wait window, silently losing its place
+// to C. With the wait-window-based horizon, B stays ahead of C.
+func TestLock_ShortTTLLongWaitRetainsSlot(t *testing.T) {
+	m := newManager(t)
+	ctx := context.Background()
+
+	// A holds a long-lived lock so the slot never frees during the test.
+	res, _ := m.Lock(ctx, "r", "agentA", 60, 0, "")
+	tok := res.LockToken
+
+	// B enqueues with a SHORT ttl (2s) and a wait window of 1s; it times out in
+	// ~1s and gets a wake token at position 1. The GC horizon is
+	// max(2*ttl, wait+slack) = max(4, 1+30) = 31s — driven by the wait window +
+	// slack, NOT 2*ttl=4s. The OLD code set the horizon to 2*ttl=4s, which would
+	// GC B partway through the loop below; the fix keeps it alive for ~31s.
+	bRes, err := m.Lock(ctx, "r", "agentB", 2, 1, "")
+	if err != nil {
+		t.Fatalf("B initial: %v", err)
+	}
+	if bRes.WakeToken == "" || bRes.QueuePosition != 1 {
+		t.Fatalf("B should be queued at pos 1 with a wake token, got %+v", bRes)
+	}
+	bWake := bRes.WakeToken
+
+	// C enqueues behind B at pos 2 (also a 1s wait window → 31s horizon).
+	cRes, _ := m.Lock(ctx, "r", "agentC", 2, 1, "")
+	if cRes.QueuePosition != 2 {
+		t.Fatalf("C should enqueue behind B at pos 2, got %+v", cRes)
+	}
+	cWake := cRes.WakeToken
+
+	// Advance real wall-clock past 2×TTL: the OLD horizon would GC both B and C
+	// at ~4s (2*ttl with ttl=2). We do NOT refresh during this window — the slots
+	// must survive purely on the horizon set at enqueue time. The reaper runs
+	// every 250ms, so by the time the sleep ends it has had many chances to GC.
+	time.Sleep(4500 * time.Millisecond)
+
+	// After >2*ttl of real time, B's slot must still be intact: a blocking
+	// re-poll re-attaches to the SAME wake token at position 1 (ahead of C).
+	bChk, err := m.Lock(ctx, "r", "agentB", 2, 1, bWake)
+	if err != nil {
+		t.Fatalf("B post-loop re-poll: %v", err)
+	}
+	if bChk.WakeToken != bWake {
+		t.Fatalf("B wake token changed %q -> %q: slot was GC'd and re-enqueued (the bug)", bWake, bChk.WakeToken)
+	}
+	if bChk.QueuePosition != 1 {
+		t.Fatalf("B QueuePosition = %d, want 1 (must stay ahead of C across the GC interval)", bChk.QueuePosition)
+	}
+
+	// C must still be behind B at pos 2.
+	cChk, _ := m.Lock(ctx, "r", "agentC", 2, 1, cWake)
+	if cChk.QueuePosition != 2 {
+		t.Fatalf("C should still be at pos 2 behind B, got %+v", cChk)
+	}
+
+	// Release A → B (still the head) must win, not C.
+	m.Unlock("r", tok, "")
+	bWin := make(chan LockResult, 1)
+	go func() {
+		// Win with a longer ttl so B's hold doesn't expire before the final C
+		// check races in.
+		r, _ := m.Lock(ctx, "r", "agentB", 30, 5, bWake)
+		bWin <- r
+	}()
+
+	select {
+	case r := <-bWin:
+		if !r.Locked {
+			t.Fatalf("B should win after release (kept its slot), got %+v", r)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("B did not win after release")
+	}
+
+	// C must still be unable to acquire (B holds now). It is now the queue head
+	// (B dequeued on win) but cannot acquire because B holds the lock.
+	cFinal, _ := m.Lock(ctx, "r", "agentC", 2, 1, cWake)
+	if cFinal.Locked {
+		t.Fatalf("C should NOT acquire while B holds, got %+v", cFinal)
+	}
+	if cFinal.HeldBy != "agentB" {
+		t.Fatalf("C should see B as holder, got HeldBy=%q", cFinal.HeldBy)
+	}
+}
+
+// TestNotAcquiredResult_NoLiveTokenAtPositionZero is the regression for the
+// inconsistent-result bug: notAcquiredResult must never return a live WakeToken
+// with QueuePosition 0. If the waiter is absent from the queue (GC'd/dequeued),
+// the result must carry no WakeToken/RetryWith. We simulate the race directly by
+// passing a waiter that was never enqueued.
+func TestNotAcquiredResult_NoLiveTokenAtPositionZero(t *testing.T) {
+	m := newManager(t)
+	ctx := context.Background()
+
+	// A holds the lock so there is a live holder to report as HeldBy.
+	if _, err := m.Lock(ctx, "r", "agentA", 60, 0, ""); err != nil {
+		t.Fatalf("A acquire: %v", err)
+	}
+
+	// A waiter that is NOT in any queue (mimics a GC'd/dequeued slot).
+	orphan := &waiter{wakeToken: mustToken(), agentID: "agentB", ch: make(chan struct{}, 1)}
+
+	got := m.notAcquiredResult("r", "agentB", orphan)
+	if got.Locked {
+		t.Fatalf("orphan waiter must not be reported as Locked")
+	}
+	if got.QueuePosition != 0 {
+		t.Fatalf("orphan waiter QueuePosition = %d, want 0", got.QueuePosition)
+	}
+	if got.WakeToken != "" {
+		t.Fatalf("must NOT advertise a live WakeToken at QueuePosition 0, got %q", got.WakeToken)
+	}
+	if got.RetryWith != "" {
+		t.Fatalf("must NOT advertise RetryWith at QueuePosition 0, got %q", got.RetryWith)
+	}
+	// HeldBy is still useful and allowed to be reported.
+	if got.HeldBy != "agentA" {
+		t.Fatalf("HeldBy = %q, want agentA", got.HeldBy)
+	}
+
+	// Invariant: a non-empty WakeToken implies QueuePosition >= 1. Verify the
+	// positive case too: a genuinely queued waiter gets a token AND pos >= 1.
+	queued := m.enqueue("r", "agentB", "", 2, 5)
+	q := m.notAcquiredResult("r", "agentB", queued)
+	if q.WakeToken != "" && q.QueuePosition < 1 {
+		t.Fatalf("invariant violated: non-empty WakeToken with QueuePosition %d", q.QueuePosition)
+	}
+	if q.WakeToken == "" || q.QueuePosition < 1 {
+		t.Fatalf("genuinely queued waiter should report token + pos >= 1, got %+v", q)
+	}
+}
+
 func TestLockMany_AllOrNothing(t *testing.T) {
 	m := newManager(t)
 	ctx := context.Background()

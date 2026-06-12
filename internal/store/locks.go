@@ -158,6 +158,11 @@ func (m *LockManager) reapOnce() {
 
 	// For each head, if the lock is currently free, signal it. Signalling is
 	// coalesced (buffered cap-1 channel) so repeated reaper ticks are harmless.
+	// The lockIsFree read here is un-transacted and advisory only: it merely
+	// decides whether to wake the head. The woken waiter re-validates freedom
+	// under a tx in tryAcquire before it can ever hold the lock, so a stale read
+	// here causes at most a spurious wake (the waiter re-blocks), never a
+	// double-grant.
 	for _, h := range heads {
 		if m.lockIsFree(h.name, now) {
 			signal(h.head)
@@ -222,7 +227,7 @@ func (m *LockManager) Lock(ctx context.Context, name, agentID string, ttlSeconds
 	}
 
 	// Blocking: enqueue (or re-attach to existing slot) and wait.
-	w := m.enqueue(name, agentID, wakeToken, ttlSeconds)
+	w := m.enqueue(name, agentID, wakeToken, ttlSeconds, waitSeconds)
 
 	deadline := time.NewTimer(time.Duration(waitSeconds) * time.Second)
 	defer deadline.Stop()
@@ -327,10 +332,33 @@ func (m *LockManager) tryAcquire(name, agentID string, ttlSeconds int) (res Lock
 	return LockResult{}, false, holder, nil
 }
 
+// waiterGCSlack is extra headroom (seconds) added on top of the wait window
+// when computing a parked waiter's GC horizon, so a well-behaved client that
+// re-polls right at the edge of its wait window is never GC'd out from under
+// itself before the re-poll lands.
+const waiterGCSlack = 30
+
+// waiterHorizon returns the Unix-seconds GC horizon for a parked waiter. The
+// horizon must comfortably exceed the maximum time a well-behaved client can be
+// away between polls — the wait window — NOT the lock TTL (a short TTL with a
+// long wait must not let the reaper drop the slot before the next re-poll). We
+// take the larger of 2×TTL (legacy slack for tiny waits) and waitSeconds+slack.
+// Note widen-before-multiply: 2*int64(ttlSeconds), not int64(2*ttlSeconds).
+func waiterHorizon(now int64, ttlSeconds, waitSeconds int) int64 {
+	byTTL := 2 * int64(ttlSeconds)
+	byWait := int64(waitSeconds) + waiterGCSlack
+	h := byTTL
+	if byWait > h {
+		h = byWait
+	}
+	return now + h
+}
+
 // enqueue appends a new waiter or re-attaches to an existing slot keyed by
-// wakeToken (idempotent re-poll). The waiter's expiresAt is 2× the TTL so a
-// caller that re-polls regularly retains its place; abandoned slots are reaped.
-func (m *LockManager) enqueue(name, agentID, wakeToken string, ttlSeconds int) *waiter {
+// wakeToken (idempotent re-poll). The waiter's GC horizon is based on the wait
+// window (see waiterHorizon) so a caller that re-polls within its wait window
+// retains its FIFO place; abandoned slots are reaped.
+func (m *LockManager) enqueue(name, agentID, wakeToken string, ttlSeconds, waitSeconds int) *waiter {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -340,7 +368,7 @@ func (m *LockManager) enqueue(name, agentID, wakeToken string, ttlSeconds int) *
 		m.queues[name] = q
 	}
 
-	expiresAt := Now() + int64(2*ttlSeconds)
+	expiresAt := waiterHorizon(Now(), ttlSeconds, waitSeconds)
 
 	// Idempotent re-poll: if wakeToken matches an existing waiter, refresh and
 	// reuse it (keep FIFO position).
@@ -416,8 +444,23 @@ func (m *LockManager) notAcquiredResult(name, agentID string, w *waiter) LockRes
 		remaining = secsLeft(rowExpires, now)
 	}
 
-	// FIFO position.
+	// FIFO position, read under mu so it reflects the live queue.
 	pos := m.queuePosition(name, w)
+
+	// Never advertise a live WakeToken/RetryWith with QueuePosition 0: if the
+	// waiter has been GC'd or dequeued between holder read and position read, the
+	// slot is gone, so returning its wake_token would tell the client "you're
+	// queued, re-poll with this token" when there is nothing to re-attach to. In
+	// that case omit the token (a re-poll with an unknown token re-enqueues at the
+	// tail anyway). A brief HeldBy staleness is fine; a live-token-with-position-0
+	// is not.
+	if pos < 1 {
+		return LockResult{
+			Locked:           false,
+			HeldBy:           heldBy,
+			ExpiresInSeconds: remaining,
+		}
+	}
 
 	return LockResult{
 		Locked:           false,
