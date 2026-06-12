@@ -712,6 +712,25 @@ h1 {
   .compare-card-badge { display: none; }
 }
 
+/* ── Built-by credit ─────────────────────────────────────────── */
+.credit-img-link {
+  display: inline-block;
+  transition: transform 0.15s, filter 0.15s;
+}
+.credit-img-link:hover {
+  transform: scale(1.04) rotate(-1deg);
+  filter: brightness(1.1);
+}
+.credit-img {
+  width: 100px;
+  height: auto;
+  display: block;
+}
+
+@media (max-width: 600px) {
+  .credit-img { width: 80px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orb, .scroll-arrow { animation: none; }
   html { scroll-behavior: auto; }
