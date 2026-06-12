@@ -306,6 +306,97 @@
           <p>Shell scripts and skills give <strong>one agent</strong> visibility for one moment. AgentPeek gives <strong>every agent</strong> a shared coordination layer — Agent A locks <code>npm-install</code>, Agent B automatically waits. No conflicts. No manual work.</p>
         </div>
 
+        <a class="scroll-indicator" href="#vs-github" aria-label="Jump to GitHub comparison">
+          vs. similar GitHub projects <span class="scroll-arrow" aria-hidden="true">↓</span>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ── Fold 4: vs. GitHub ─────────────────────────────────────── -->
+    <section class="fold4" id="vs-github">
+      <div class="fold4-inner">
+
+        <div class="fold4-header">
+          <span class="fold4-label">GitHub Landscape</span>
+          <h2 class="fold4-headline">Other tools store memory.<br><span class="fold4-headline-accent">AgentPeek prevents conflicts.</span></h2>
+          <p class="fold4-sub">The closest projects on GitHub focus on memory recall — what an agent did. AgentPeek focuses on real-time coordination — what two agents are doing right now.</p>
+        </div>
+
+        <div class="gh-compare-grid">
+
+          <!-- engram -->
+          <div class="gh-card">
+            <div class="gh-card-header">
+              <span class="gh-card-name">engram</span>
+              <a href="https://github.com/Bra1nSpread/engram" class="gh-card-stars" target="_blank" rel="noopener">★ 4.3k</a>
+            </div>
+            <p class="gh-card-desc">Knowledge graph memory for AI agents. Stores facts and relationships so agents can recall past context.</p>
+            <ul class="gh-rows">
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Resource locking</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Always-on daemon</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Cross-agent coordination</span></li>
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>Memory / recall</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Zero dependencies</span></li>
+            </ul>
+          </div>
+
+          <!-- mem0 -->
+          <div class="gh-card">
+            <div class="gh-card-header">
+              <span class="gh-card-name">mem0</span>
+              <a href="https://github.com/mem0ai/mem0" class="gh-card-stars" target="_blank" rel="noopener">★ 27k</a>
+            </div>
+            <p class="gh-card-desc">Persistent memory layer for AI apps. Cloud-first service that stores and retrieves agent memories across sessions.</p>
+            <ul class="gh-rows">
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Resource locking</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Always-on daemon</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Cross-agent coordination</span></li>
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>Memory / recall</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Zero dependencies</span></li>
+            </ul>
+          </div>
+
+          <!-- mcp-server-memory -->
+          <div class="gh-card">
+            <div class="gh-card-header">
+              <span class="gh-card-name">mcp-server-memory</span>
+              <a href="https://github.com/modelcontextprotocol/servers" class="gh-card-stars" target="_blank" rel="noopener">★ 12k</a>
+            </div>
+            <p class="gh-card-desc">Official MCP reference server for in-process memory. Per-session knowledge graph — not shared between agents.</p>
+            <ul class="gh-rows">
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Resource locking</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Always-on daemon</span></li>
+              <li class="gh-row gh-row--no"><span class="gh-dot"></span><span>Cross-agent coordination</span></li>
+              <li class="gh-row gh-row--partial"><span class="gh-dot"></span><span>Memory / recall (per-session)</span></li>
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>Zero dependencies</span></li>
+            </ul>
+          </div>
+
+          <!-- AgentPeek (featured) -->
+          <div class="gh-card gh-card--featured">
+            <div class="compare-card-badge">This one</div>
+            <div class="gh-card-header">
+              <span class="gh-card-name">AgentPeek</span>
+              <span class="gh-card-new">new</span>
+            </div>
+            <p class="gh-card-desc">Native macOS daemon that gives every agent a shared coordination layer — atomic locks, shared notes, no cloud.</p>
+            <ul class="gh-rows">
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>✓ Resource locking</span></li>
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>✓ Always-on daemon</span></li>
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>✓ Cross-agent coordination</span></li>
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>✓ Shared scratchpad</span></li>
+              <li class="gh-row gh-row--yes"><span class="gh-dot"></span><span>✓ Zero dependencies</span></li>
+            </ul>
+          </div>
+
+        </div><!-- /gh-compare-grid -->
+
+        <div class="compare-insight">
+          <span class="compare-insight-dot"></span>
+          <p>Memory tools answer <strong>"what did Agent A do last week?"</strong> AgentPeek answers <strong>"is Agent A using this file right now?"</strong> — the problem is different, the solution is different.</p>
+        </div>
+
         <a href="#top" class="scroll-indicator" aria-label="Back to top" style="margin-top:8px">
           ← Back to top
         </a>
