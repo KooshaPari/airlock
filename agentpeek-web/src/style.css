@@ -712,6 +712,146 @@ h1 {
   .compare-card-badge { display: none; }
 }
 
+/* ── Fold 4: GitHub comparison ──────────────────────────────── */
+.fold4 {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px 48px;
+  scroll-snap-align: start;
+}
+.fold4-inner {
+  width: 100%;
+  max-width: 1040px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+.fold4-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.fold4-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--violet-bright);
+  opacity: 0.8;
+}
+.fold4-headline {
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f0f0ff;
+}
+.fold4-headline-accent { color: var(--violet-bright); }
+.fold4-sub {
+  font-size: 15px;
+  color: rgba(200,200,230,0.6);
+  max-width: 560px;
+  line-height: 1.6;
+}
+
+.gh-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.gh-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+}
+.gh-card--featured {
+  background: rgba(124,58,237,0.10);
+  border-color: rgba(139,92,246,0.40);
+  box-shadow: 0 0 28px rgba(124,58,237,0.15);
+}
+.gh-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.gh-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e8e8f8;
+}
+.gh-card-stars {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(200,200,230,0.5);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.gh-card-stars:hover { color: var(--violet-bright); }
+.gh-card-new {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--violet-bright);
+  background: rgba(139,92,246,0.15);
+  border: 1px solid rgba(139,92,246,0.3);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.gh-card-desc {
+  font-size: 12.5px;
+  color: rgba(200,200,230,0.55);
+  line-height: 1.55;
+}
+.gh-rows {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: auto;
+}
+.gh-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+}
+.gh-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.gh-row--yes  { color: rgba(167,243,208,0.85); }
+.gh-row--yes  .gh-dot { background: #34d399; }
+.gh-row--no   { color: rgba(200,200,230,0.35); }
+.gh-row--no   .gh-dot { background: rgba(255,255,255,0.15); }
+.gh-row--partial { color: rgba(251,191,36,0.7); }
+.gh-row--partial .gh-dot { background: #fbbf24; }
+
+@media (max-width: 900px) {
+  .gh-compare-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .gh-compare-grid { grid-template-columns: 1fr; }
+  .fold4 { padding: 48px 20px 40px; }
+  .fold4-headline { font-size: 1.3rem; }
+}
+
 /* ── Built-by credit ─────────────────────────────────────────── */
 .credit-img-link {
   display: inline-block;
