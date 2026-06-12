@@ -41,9 +41,9 @@ func run(args []string) int {
 	case "daemon":
 		return runDaemon(rest)
 	case "status":
-		return cli.Status()
+		return cli.Status(resolveDBPath(""))
 	case "watch":
-		return cli.Watch()
+		return cli.Watch(resolveDBPath(""))
 	case "install-service":
 		fmt.Println("install-service: not yet implemented")
 		return 0
