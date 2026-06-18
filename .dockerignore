@@ -1,0 +1,9 @@
+.git
+.github
+legacy
+airlock-web
+docs
+*.md
+.gitignore
+Dockerfile
+.dockerignore
