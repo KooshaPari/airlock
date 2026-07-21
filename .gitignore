@@ -7,3 +7,6 @@
 /airlock
 *.test
 state.db*
+.DS_Store
+target/
+**/target/
