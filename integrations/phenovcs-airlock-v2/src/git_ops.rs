@@ -7,8 +7,10 @@
 //!
 //! ## Conservative-only-on-delete
 //!
-//! - `push_branch` uses **fast-forward only** (`--ff-only`). There is no
-//!   `--force`, no `--atomic --force-with-lease`, no `git push --push-option`.
+//! - `push_branch` performs a local ancestry preflight and then uses a plain
+//!   non-force push. There is no `git push --ff-only` (that is not a valid
+//!   `git push` flag), no `--force`, no `--atomic --force-with-lease`, and no
+//!   `git push --push-option`.
 //! - When a push is rejected, callers should use `try_push_or_snapshot` to
 //!   preserve work as a fresh `wip/<date>-<uuid>` branch on the remote
 //!   (new refs are inherently fast-forwardable, so this never loses work).
@@ -261,14 +263,51 @@ pub fn run_git_with_env(
     })
 }
 
-/// Push `branch` to origin with `--ff-only`.
+/// Push `branch` to origin without allowing a non-fast-forward update.
 ///
-/// Returns the result even when the push fails so the caller can decide
-/// whether to fall back to a `wip/<date>-<uuid>` snapshot branch. We never
+/// Git's `push` command has no `--ff-only` flag. Instead, preflight the
+/// remote branch with `ls-remote` and verify that its tip is an ancestor of
+/// the local `HEAD`, then issue an ordinary non-force push. A remote update
+/// can still race this preflight; in that case Git rejects the push and the
+/// caller can fall back to a `wip/<date>-<uuid>` snapshot branch. We never
 /// force-push — that is the central invariant.
 pub fn push_branch_ff_only(path: &Path, branch: &str) -> Result<(bool, String)> {
-    let args = ["push", "--ff-only", "origin", branch];
-    let res = run_git(&args, path, Some(60))?;
+    let remote_ref = format!("refs/heads/{branch}");
+    let probe = run_git(
+        &["ls-remote", "--heads", "origin", &remote_ref],
+        path,
+        Some(60),
+    )?;
+    if !probe.ok() {
+        return Ok((false, probe.combined()));
+    }
+
+    let remote_tip = probe
+        .stdout
+        .lines()
+        .find_map(|line| line.split_whitespace().next())
+        .filter(|sha| !sha.is_empty());
+    if let Some(remote_tip) = remote_tip {
+        let ancestry = run_git(
+            &["merge-base", "--is-ancestor", remote_tip, "HEAD"],
+            path,
+            None,
+        )?;
+        if !ancestry.ok() {
+            return Ok((
+                false,
+                format!(
+                    "non-fast-forward: origin/{branch} ({remote_tip}) is not an ancestor of HEAD"
+                ),
+            ));
+        }
+    }
+
+    let res = if remote_tip.is_some() {
+        run_git(&["push", "origin", branch], path, Some(60))?
+    } else {
+        run_git(&["push", "--set-upstream", "origin", branch], path, Some(60))?
+    };
     let combined = res.combined();
     Ok((res.ok(), combined))
 }
@@ -295,12 +334,16 @@ pub fn try_push_or_snapshot(path: &Path, branch: &str, date_tag: &str) -> Result
     }
     let no_remote = err.contains("Could not resolve hostname")
         || err.contains("Could not read")
+        || err.contains("does not appear to be a git repository")
         || err.to_lowercase().contains("not a git repository")
         || err.contains("No such remote");
     let non_ff = err.contains("non-fast-forward")
         || err.to_lowercase().contains("rejected")
         || err.contains("[rejected]");
-    if no_remote || non_ff {
+    if no_remote {
+        return Ok((false, format!("origin remote unavailable: {err}")));
+    }
+    if non_ff {
         // Backup as `wip/<date>-<hex8>`. New ref → inherently fast-forwardable.
         let backup = format!("wip/{date_tag}-{}", short_uuid());
         let cre = run_git(&["branch", &backup, "HEAD"], path, None)?;
@@ -547,6 +590,121 @@ mod tests {
         let repo = init_git_repo(tmp.path())?;
         let (ok, _) = push_branch_ff_only(&repo, "main")?;
         assert!(!ok, "push without an origin must fail conservatively");
+        Ok(())
+    }
+
+    #[test]
+    fn push_branch_ff_only_pushes_to_an_empty_bare_remote() -> Result<()> {
+        let tmp = TempDir::new()?;
+        let repo = init_git_repo(&tmp.path().join("repo"))?;
+        let remote = tmp.path().join("remote.git");
+        run_git(
+            &["init", "--bare", remote.to_str().unwrap()],
+            tmp.path(),
+            None,
+        )?;
+        run_git(
+            &["remote", "add", "origin", remote.to_str().unwrap()],
+            &repo,
+            None,
+        )?;
+
+        let (ok, detail) = push_branch_ff_only(&repo, "main")?;
+        assert!(ok, "initial push failed: {detail}");
+        let refs = run_git(
+            &["show-ref", "--verify", "refs/heads/main"],
+            &remote,
+            None,
+        )?;
+        assert!(refs.ok(), "main was not created on the bare remote: {refs:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn try_push_or_snapshot_falls_back_after_remote_diverges() -> Result<()> {
+        let tmp = TempDir::new()?;
+        let repo = init_git_repo(&tmp.path().join("repo"))?;
+        let remote = tmp.path().join("remote.git");
+        run_git(
+            &["init", "--bare", remote.to_str().unwrap()],
+            tmp.path(),
+            None,
+        )?;
+        run_git(
+            &["remote", "add", "origin", remote.to_str().unwrap()],
+            &repo,
+            None,
+        )?;
+        let (initial_ok, initial_detail) = push_branch_ff_only(&repo, "main")?;
+        assert!(initial_ok, "initial push failed: {initial_detail}");
+
+        let remote_clone = tmp.path().join("remote-clone");
+        run_git(
+            &[
+                "clone",
+                remote.to_str().unwrap(),
+                remote_clone.to_str().unwrap(),
+            ],
+            tmp.path(),
+            None,
+        )?;
+        run_git(
+            &["config", "user.email", "remote@example.com"],
+            &remote_clone,
+            None,
+        )?;
+        run_git(
+            &["config", "user.name", "Remote"],
+            &remote_clone,
+            None,
+        )?;
+        std::fs::write(remote_clone.join("remote.txt"), "remote\n")?;
+        run_git(&["add", "remote.txt"], &remote_clone, None)?;
+        run_git(
+            &["commit", "-m", "remote change", "--no-verify"],
+            &remote_clone,
+            None,
+        )?;
+        let remote_push = run_git(&["push", "origin", "main"], &remote_clone, None)?;
+        assert!(remote_push.ok(), "remote divergence setup failed: {remote_push:?}");
+
+        std::fs::write(repo.join("local.txt"), "local\n")?;
+        run_git(&["add", "local.txt"], &repo, None)?;
+        run_git(
+            &["commit", "-m", "local change", "--no-verify"],
+            &repo,
+            None,
+        )?;
+
+        let (ok, detail) = try_push_or_snapshot(&repo, "main", "test-divergence")?;
+        assert!(ok, "wip fallback failed: {detail}");
+        assert!(detail.contains("backup at wip/test-divergence-"), "{detail}");
+
+        let remote_heads = run_git(
+            &["ls-remote", "--heads", remote.to_str().unwrap()],
+            tmp.path(),
+            None,
+        )?;
+        assert!(remote_heads.ok());
+        assert!(remote_heads.stdout.lines().any(|line| line.ends_with("refs/heads/main")));
+        assert!(remote_heads
+            .stdout
+            .lines()
+            .any(|line| line.contains("refs/heads/wip/test-divergence-")));
+        Ok(())
+    }
+
+    #[test]
+    fn try_push_or_snapshot_reports_missing_origin_without_creating_branch() -> Result<()> {
+        let tmp = TempDir::new()?;
+        let repo = init_git_repo(tmp.path())?;
+
+        let (ok, detail) = try_push_or_snapshot(&repo, "main", "test-no-remote")?;
+        assert!(!ok);
+        assert!(detail.contains("origin") || detail.contains("remote"), "{detail}");
+        let branches = run_git(&["branch", "--list", "wip/*"], &repo, None)?;
+        assert!(branches.ok());
+        assert!(branches.stdout.trim().is_empty(), "unexpected local wip branch: {branches:?}");
         Ok(())
     }
 
