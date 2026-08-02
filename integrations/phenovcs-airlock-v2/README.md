@@ -70,8 +70,24 @@ target/release/airlock-v2 register /Users/kooshapari/CodeProjects/Phenotype/repo
 # Audit every registered repo:
 target/release/airlock-v2 audit
 
-# Long-running scheduler (called by launchd):
+# Long-running scheduler (for an explicitly managed supervisor):
 cargo run --release --example daemon -- autocommit
+
+## Managed cycle wrappers
+
+`packaging/airlock-v2-install.sh` builds the release binary and stages it with
+the single-shot cycle wrappers in the container's `.airlock/bin` directory
+(override with `AIRLOCK_V2_BIN_DIR`). The default is the sibling `.airlock`
+directory under the Phenotype repos container, matching the existing launchd
+unit paths. `airlock-v2-update.sh` repeats the same build-and-stage operation;
+`airlock-v2-uninstall.sh` removes only files bearing the install marker.
+
+The scripts never load, unload, or restart a supervisor. After reviewing the
+staged files, an operator may reload the platform-native unit explicitly. The
+wrappers resolve the sibling `airlock-v2` binary and invoke one cycle, so a
+launchd `StartInterval` or a systemd timer can own scheduling without a second
+daemon implementation. Run `packaging/packaging_test.sh` for a dependency-free
+argument-routing smoke test.
 ```
 
 ## Layout
