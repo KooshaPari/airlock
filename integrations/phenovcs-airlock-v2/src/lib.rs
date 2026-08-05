@@ -41,6 +41,7 @@ pub mod cleanup;
 pub mod cli;
 pub mod git_ops;
 pub mod registry;
+pub mod snapshot;
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
