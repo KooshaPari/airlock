@@ -149,7 +149,12 @@ pub fn primary_branch(path: &Path) -> Result<String> {
     }
     for candidate in ["main", "master", "trunk", "develop"] {
         let check = run_git(
-            &["show-ref", "--verify", "--quiet", &format!("refs/heads/{candidate}")],
+            &[
+                "show-ref",
+                "--verify",
+                "--quiet",
+                &format!("refs/heads/{candidate}"),
+            ],
             path,
             None,
         )?;
@@ -242,11 +247,7 @@ pub fn commit_all(path: &Path, message: &str) -> Result<bool> {
 
 /// Like [`run_git`] but injects additional environment variables (e.g. for
 /// setting author identity per-command).
-pub fn run_git_with_env(
-    args: &[&str],
-    cwd: &Path,
-    env: &[(&str, String)],
-) -> Result<GitResult> {
+pub fn run_git_with_env(args: &[&str], cwd: &Path, env: &[(&str, String)]) -> Result<GitResult> {
     let mut cmd = Command::new("git");
     cmd.args(args);
     cmd.current_dir(cwd);
@@ -343,10 +344,7 @@ fn short_uuid() -> String {
 pub fn create_branch_at_head(path: &Path, name: &str) -> Result<()> {
     let res = run_git(&["branch", name, "HEAD"], path, None)?;
     if !res.ok() {
-        bail!(
-            "could not create branch {name}: {}",
-            res.combined()
-        );
+        bail!("could not create branch {name}: {}", res.combined());
     }
     Ok(())
 }
@@ -381,9 +379,7 @@ pub fn recover_one_stash(
             Some(backup_branch),
         ));
     }
-    let msg = format!(
-        "wip: applied stash {stash_ref} ({date_tag})\n\n{diff_lines} lines"
-    );
+    let msg = format!("wip: applied stash {stash_ref} ({date_tag})\n\n{diff_lines} lines");
     if !commit_all(path, &msg)? {
         return Ok((
             false,
@@ -395,9 +391,7 @@ pub fn recover_one_stash(
     if !ok {
         return Ok((
             false,
-            format!(
-                "applied+committed to local {backup_branch} (not pushed): {push_msg}"
-            ),
+            format!("applied+committed to local {backup_branch} (not pushed): {push_msg}"),
             Some(backup_branch),
         ));
     }
@@ -509,7 +503,11 @@ mod tests {
         // a single empty commit. No remote — tests that need a remote set
         // it up explicitly.
         std::fs::create_dir_all(dir)?;
-        run_git(&["init", "-q", "-b", "main", dir.to_str().unwrap()], dir, None)?;
+        run_git(
+            &["init", "-q", "-b", "main", dir.to_str().unwrap()],
+            dir,
+            None,
+        )?;
         let cfg = |k: &str, v: &str| -> Result<()> {
             run_git(&["config", "user.email", "test@example.com"], dir, None)?;
             run_git(&["config", "user.name", "Test"], dir, None)?;

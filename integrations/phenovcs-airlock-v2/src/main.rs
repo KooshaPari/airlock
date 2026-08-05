@@ -24,8 +24,8 @@
 use anyhow::Result;
 
 use airlock_v2::cli::{run, Cli};
-use clap::Parser;
 use airlock_v2::StateRoot;
+use clap::Parser;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

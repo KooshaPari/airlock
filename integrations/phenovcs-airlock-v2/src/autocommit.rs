@@ -11,8 +11,8 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::git_ops::{commit_all, dirty_count, is_inside_work_tree, try_push_or_snapshot};
-use crate::registry::{RepoEntry, Registry};
 use crate::registry::{append_event, load, now_iso, parse_iso, save, short_ts, upsert_entry};
+use crate::registry::{Registry, RepoEntry};
 use crate::{StateRoot, AUTOCOMMIT_INTERVAL};
 
 /// Per-repo decision record.
@@ -71,7 +71,10 @@ impl AutocommitSummary {
 pub fn run(state_root: &StateRoot, dry_run: bool) -> Result<AutocommitSummary> {
     state_root.ensure_dirs()?;
     let mut registry = load(state_root)?;
-    let mut summary = AutocommitSummary { dry_run, ..Default::default() };
+    let mut summary = AutocommitSummary {
+        dry_run,
+        ..Default::default()
+    };
 
     // Collect entries first to avoid borrow conflict with &mut registry
     let entries: Vec<(String, RepoEntry)> = registry

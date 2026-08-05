@@ -49,11 +49,7 @@ impl CleanupSummary {
         }
         s.push_str(&format!(
             "[done] visited={} stashes_recovered={} commits_pushed={} errors={} dry_run={}\n",
-            self.visited,
-            self.stashes_recovered,
-            self.commits_pushed,
-            self.errors,
-            self.dry_run,
+            self.visited, self.stashes_recovered, self.commits_pushed, self.errors, self.dry_run,
         ));
         s
     }
@@ -160,8 +156,7 @@ fn run_one(
         let (ahead, _) = ahead_behind(repo_path, &branch).unwrap_or((0, 0));
         rec.ahead = ahead;
         if ahead > 0 && !dry_run {
-            let push_result =
-                crate::git_ops::try_push_or_snapshot(repo_path, &branch, &short_ts());
+            let push_result = crate::git_ops::try_push_or_snapshot(repo_path, &branch, &short_ts());
             match push_result {
                 Ok((ok, msg)) => {
                     rec.push_ok = Some(ok);

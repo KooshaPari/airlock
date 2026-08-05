@@ -181,8 +181,7 @@ pub fn save(state_root: &StateRoot, registry: &Registry) -> Result<()> {
     state_root.ensure_dirs()?;
     let final_path = state_root.registry_path();
     let tmp = final_path.with_extension("tmp");
-    let json = serde_json::to_string_pretty(registry)
-        .with_context(|| "serialise registry")?;
+    let json = serde_json::to_string_pretty(registry).with_context(|| "serialise registry")?;
     fs::write(&tmp, json).with_context(|| format!("write tmp at {}", tmp.display()))?;
     fs::rename(&tmp, &final_path)
         .with_context(|| format!("rename {} -> {}", tmp.display(), final_path.display()))?;
@@ -191,7 +190,11 @@ pub fn save(state_root: &StateRoot, registry: &Registry) -> Result<()> {
 
 /// Append a single NDJSON event line to the named log file under
 /// `logs/`. If the file does not exist, it is created.
-pub fn append_event(state_root: &StateRoot, log_name: &str, event: &serde_json::Value) -> Result<()> {
+pub fn append_event(
+    state_root: &StateRoot,
+    log_name: &str,
+    event: &serde_json::Value,
+) -> Result<()> {
     state_root.ensure_dirs()?;
     let path = state_root.log_path(log_name);
     let mut line = serde_json::to_string(event)?;
@@ -218,11 +221,7 @@ pub fn short_ts() -> String {
 
 /// Helper: update a single entry in a registry, preserving
 /// `registered_at` on re-registration.
-pub fn upsert_entry(
-    registry: &mut Registry,
-    path: &str,
-    mutator: impl FnOnce(&mut RepoEntry),
-) {
+pub fn upsert_entry(registry: &mut Registry, path: &str, mutator: impl FnOnce(&mut RepoEntry)) {
     let mut entry = registry.remove(path).unwrap_or_default();
     if entry.registered_at.is_none() {
         entry.registered_at = Some(now_iso());
@@ -313,7 +312,10 @@ mod tests {
         save(&root, &reg)?;
         // After save, no .tmp file should be left behind in the parent.
         let tmp_path = root.registry_path().with_extension("tmp");
-        assert!(!tmp_path.exists(), "tmp file must be moved into final position");
+        assert!(
+            !tmp_path.exists(),
+            "tmp file must be moved into final position"
+        );
         assert!(root.registry_path().exists());
         Ok(())
     }

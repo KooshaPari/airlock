@@ -7,6 +7,7 @@ use crate::git_ops::{
     dirty_count, get_remote_url, primary_branch, snapshot_repo, try_push_or_snapshot,
 };
 use crate::registry::{load, save, short_ts, upsert_entry, Registry};
+use crate::snapshot::{create_snapshot_commit, verify_pushed_snapshot};
 use crate::StateRoot;
 
 #[derive(Debug, Parser)]
@@ -26,15 +27,11 @@ pub enum Commands {
         repo_path: String,
     },
     /// Remove a repository from the registry.
-    Unregister {
-        repo_path: String,
-    },
+    Unregister { repo_path: String },
     /// List every registered repo.
     List,
     /// Show a one-screen status for a single repo.
-    Status {
-        repo_path: String,
-    },
+    Status { repo_path: String },
     /// Create+push a `wip/<date>-<uuid>` snapshot branch.
     Snapshot {
         repo_path: String,
@@ -117,9 +114,7 @@ pub fn run(cli: &Cli, state_root: &StateRoot) -> Result<i32> {
         Commands::Cleanup { dry_run } => cmd_cleanup(state_root, *dry_run),
         Commands::Daemon { mode } => cmd_daemon(state_root, mode),
         Commands::Audit => cmd_audit(state_root),
-        Commands::Restore { repo_path, branch } => {
-            cmd_restore(state_root, repo_path, branch)
-        }
+        Commands::Restore { repo_path, branch } => cmd_restore(state_root, repo_path, branch),
         Commands::Quickstatus => cmd_quickstatus(state_root),
     }
 }
@@ -127,12 +122,17 @@ pub fn run(cli: &Cli, state_root: &StateRoot) -> Result<i32> {
 fn cmd_register(state_root: &StateRoot, repo_path: &str) -> Result<i32> {
     let repo_path = resolve_repo_path(repo_path)?;
     if !crate::git_ops::is_inside_work_tree(&repo_path)? {
-        println!("[SKIP] {} is not inside a git work tree.", repo_path.display());
+        println!(
+            "[SKIP] {} is not inside a git work tree.",
+            repo_path.display()
+        );
         return Ok(1);
     }
     let mut registry = load(state_root)?;
     let key = repo_path.to_string_lossy().to_string();
-    let remote_url = get_remote_url(&repo_path).unwrap_or(None).unwrap_or_default();
+    let remote_url = get_remote_url(&repo_path)
+        .unwrap_or(None)
+        .unwrap_or_default();
     let primary = primary_branch(&repo_path).unwrap_or_else(|_| "main".to_string());
     upsert_entry(&mut registry, &key, |e| {
         e.remote_url = if remote_url.is_empty() {
@@ -153,7 +153,10 @@ fn cmd_unregister(state_root: &StateRoot, repo_path: &str) -> Result<i32> {
     let key = repo_path.to_string_lossy().to_string();
     let mut registry = load(state_root)?;
     if registry.remove(&key).is_none() {
-        println!("[INFO] {} not in registry; nothing to do.", repo_path.display());
+        println!(
+            "[INFO] {} not in registry; nothing to do.",
+            repo_path.display()
+        );
         return Ok(0);
     }
     save(state_root, &registry)?;
@@ -186,17 +189,29 @@ fn cmd_snapshot(state_root: &StateRoot, repo_path: &str, message: Option<&str>) 
         return Ok(1);
     }
     let snapshot_branch = format!("wip/{}-{}", short_ts(), crate::cli::short_id());
-    crate::git_ops::create_branch_at_head(&repo_path, &snapshot_branch)?;
+    let snapshot = match create_snapshot_commit(&repo_path, &snapshot_branch, message)? {
+        Some(snapshot) => snapshot,
+        None => {
+            println!("[INFO] No non-ignored working-tree changes; no snapshot created.");
+            return Ok(0);
+        }
+    };
     let (ok, msg) = crate::git_ops::push_branch_with_upstream(&repo_path, &snapshot_branch)?;
     let _ = state_root;
     if !ok {
         println!(
-            "[WARN] Push failed for {snapshot_branch}: {msg}\n       Local branch {snapshot_branch} is preserved."
+            "[WARN] Push failed for {snapshot_branch}: {msg}\n       Local branch {snapshot_branch} at {} is preserved.",
+            snapshot.commit
         );
         return Ok(2);
     }
+    verify_pushed_snapshot(&repo_path, &snapshot)?;
     println!("[OK] Snapshot created and pushed: {snapshot_branch}");
-    println!("     {msg}");
+    println!("     {}", msg.trim());
+    println!(
+        "     commit: {} (parent {})",
+        snapshot.commit, snapshot.head
+    );
     if let Some(m) = message {
         println!("     note: {m}");
     }
