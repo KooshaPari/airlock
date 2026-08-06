@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "purpose": "redacted malformed LaunchAgent recovery evidence",
+  "redaction": {
+    "original_bytes": "sha256-only",
+    "program_arguments": "program-path-only",
+    "environment_values": "excluded",
+    "logs": "excluded"
+  },
+  "agents": [
+    {"label":"com.phenoforge.airlock-v2-autocommit","path":"/Users/kooshapari/Library/LaunchAgents/com.phenoforge.airlock-v2-autocommit.plist","sha256":"43682025815bd61f951f22b68d6232d534960a73f78ba56c325395cd8c29cee4","launchctl":{"state":"running","program":"/bin/zsh","runs":9,"last_exit_code":"1"},"template":"plists/com.phenoforge.airlock-v2-autocommit.plist"},
+    {"label":"com.phenoforge.airlock-v2-cleanup","path":"/Users/kooshapari/Library/LaunchAgents/com.phenoforge.airlock-v2-cleanup.plist","sha256":"1e8b2d835bcbfbcc950e1433252ea760d0dcafdcca8cff203725a7e503dcb1f1","launchctl":{"state":"running","program":"/bin/zsh","runs":2,"last_exit_code":"1"},"template":"plists/com.phenoforge.airlock-v2-cleanup.plist"},
+    {"label":"com.phenoforge.forge-net-heal","path":"/Users/kooshapari/Library/LaunchAgents/com.phenoforge.forge-net-heal.plist","sha256":"271710b2efc9e64c43d8d698f5bef0242d350bf737827a459e8313a4f0239c65","launchctl":{"state":"unknown","program":"unknown","runs":"unknown","last_exit_code":"unknown"},"template":"plists/com.phenoforge.forge-net-heal.plist"},
+    {"label":"com.phenoforge.forge-proc-reap","path":"/Users/kooshapari/Library/LaunchAgents/com.phenoforge.forge-proc-reap.plist","sha256":"808d0bd4b3a99586289a942c0f0ded482f68c52346b7664f225adba81b82f086","launchctl":{"state":"unknown","program":"unknown","runs":"unknown","last_exit_code":"unknown"},"template":"plists/com.phenoforge.forge-proc-reap.plist"},
+    {"label":"com.phenoforge.forge-watchdog","path":"/Users/kooshapari/Library/LaunchAgents/com.phenoforge.forge-watchdog.plist","sha256":"3ebb7dd5cd7f84332da4e910266fae3ac6eb8d439f57ebdea176ecab78d0490f","launchctl":{"state":"not running","program":"/bin/zsh","runs":110,"last_exit_code":"127"},"template":"plists/com.phenoforge.forge-watchdog.plist"},
+    {"label":"com.phenotype.grapheon","path":"/Users/kooshapari/Library/LaunchAgents/com.phenotype.grapheon.plist","sha256":"eb77db653cb25dbf98b456f729db994d5806c719e8e8ca451683a9865ff2743d","launchctl":{"state":"spawn scheduled","program":"/Users/kooshapari/CodeProjects/Phenotype/Data/grapheon/grapheon-server","runs":6977,"last_exit_code":"78: EX_CONFIG"},"template":"plists/com.phenotype.grapheon.plist"},
+    {"label":"com.phenotype.sharecli","path":"/Users/kooshapari/Library/LaunchAgents/com.phenotype.sharecli.plist","sha256":"076b6376e69bf45c3dee68feec925f5426edaa22a74df761b3efa4d787ca48a6","launchctl":{"state":"running","program":"/Users/kooshapari/.cargo/bin/sharecli","runs":1,"last_exit_code":"never exited"},"template":"plists/com.phenotype.sharecli.plist"},
+    {"label":"com.phenotype.sharecli.session-watch","path":"/Users/kooshapari/Library/LaunchAgents/com.phenotype.sharecli.session-watch.plist","sha256":"debffdc48e90029110b1a699b1dd92b3b52a0f5afdfb7d432cdd05e276d49321","launchctl":{"state":"running","program":"/Users/kooshapari/.cargo/bin/sharecli","runs":1,"last_exit_code":"never exited"},"template":"plists/com.phenotype.sharecli.session-watch.plist"},
+    {"label":"com.phenotype.tracera-server","path":"/Users/kooshapari/Library/LaunchAgents/com.phenotype.tracera-server.plist","sha256":"c35e166c12a259c268311dd058555413c45acb0d68371f0a129017f148780b31","launchctl":{"state":"running","program":"/Users/kooshapari/Applications/Tracera-secured-0.1.0-2385471bd.app/Contents/Resources/tracera-server","runs":1,"last_exit_code":"never exited"},"template":"plists/com.phenotype.tracera-server.plist"}
+  ]
+}
