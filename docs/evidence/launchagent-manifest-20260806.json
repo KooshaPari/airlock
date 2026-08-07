@@ -1,0 +1,265 @@
+{
+  "base_ref": "origin/main",
+  "labels": [
+    {
+      "allowlisted_environment_names": [
+        "HOME",
+        "PATH"
+      ],
+      "label": "com.phenoforge.airlock-v2-autocommit",
+      "loaded": {
+        "active_count": "0",
+        "last_exit_code": "1",
+        "program": "/bin/zsh",
+        "runs": "19",
+        "state": "not running",
+        "stderr_path": "/Users/kooshapari/.airlock/v2/logs/launchd-autocommit.log",
+        "stdout_path": "/Users/kooshapari/.airlock/v2/logs/launchd-autocommit.log",
+        "working_directory": "/Users/kooshapari"
+      },
+      "source_bytes": 114,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenoforge.airlock-v2-autocommit.plist",
+      "source_sha256": "43682025815bd61f951f22b68d6232d534960a73f78ba56c325395cd8c29cee4",
+      "unknown_environment_names": [
+        "DISPLAY",
+        "SSH_AUTH_SOCK",
+        "XPC_SERVICE_NAME"
+      ],
+      "unknown_markers": [
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [
+        "HOME",
+        "PATH"
+      ],
+      "label": "com.phenoforge.airlock-v2-cleanup",
+      "loaded": {
+        "active_count": "0",
+        "last_exit_code": "1",
+        "program": "/bin/zsh",
+        "runs": "2",
+        "state": "not running",
+        "stderr_path": "/Users/kooshapari/.airlock/v2/logs/launchd-cleanup.log",
+        "stdout_path": "/Users/kooshapari/.airlock/v2/logs/launchd-cleanup.log",
+        "working_directory": "/Users/kooshapari"
+      },
+      "source_bytes": 111,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenoforge.airlock-v2-cleanup.plist",
+      "source_sha256": "1e8b2d835bcbfbcc950e1433252ea760d0dcafdcca8cff203725a7e503dcb1f1",
+      "unknown_environment_names": [
+        "DISPLAY",
+        "SSH_AUTH_SOCK",
+        "XPC_SERVICE_NAME"
+      ],
+      "unknown_markers": [
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [],
+      "label": "com.phenoforge.forge-net-heal",
+      "loaded": null,
+      "source_bytes": 62,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenoforge.forge-net-heal.plist",
+      "source_sha256": "271710b2efc9e64c43d8d698f5bef0242d350bf737827a459e8313a4f0239c65",
+      "unknown_environment_names": [],
+      "unknown_markers": [
+        "launchctl_print_unavailable",
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [],
+      "label": "com.phenoforge.forge-proc-reap",
+      "loaded": null,
+      "source_bytes": 65,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenoforge.forge-proc-reap.plist",
+      "source_sha256": "808d0bd4b3a99586289a942c0f0ded482f68c52346b7664f225adba81b82f086",
+      "unknown_environment_names": [],
+      "unknown_markers": [
+        "launchctl_print_unavailable",
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [
+        "HOME",
+        "PATH"
+      ],
+      "label": "com.phenoforge.forge-watchdog",
+      "loaded": {
+        "active_count": "1",
+        "last_exit_code": "127",
+        "program": "/bin/zsh",
+        "runs": "173",
+        "state": "xpcproxy",
+        "stderr_path": "/Users/kooshapari/.forge/audit/watchdog-launchd.log",
+        "stdout_path": "/Users/kooshapari/.forge/audit/watchdog-launchd.log",
+        "working_directory": "/Users/kooshapari"
+      },
+      "source_bytes": 78,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenoforge.forge-watchdog.plist",
+      "source_sha256": "3ebb7dd5cd7f84332da4e910266fae3ac6eb8d439f57ebdea176ecab78d0490f",
+      "unknown_environment_names": [
+        "DISPLAY",
+        "SSH_AUTH_SOCK",
+        "XPC_SERVICE_NAME"
+      ],
+      "unknown_markers": [
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [
+        "DATABASE_URL",
+        "GRAPHEON_BIND_ADDR",
+        "GRAPHEON_FRONTEND_DIST",
+        "PATH",
+        "RUST_LOG"
+      ],
+      "label": "com.phenotype.grapheon",
+      "loaded": {
+        "active_count": "0",
+        "last_exit_code": "78: EX_CONFIG",
+        "program": "/Users/kooshapari/CodeProjects/Phenotype/Data/grapheon/grapheon-server",
+        "runs": "10976",
+        "state": "spawn scheduled",
+        "stderr_path": "/Users/kooshapari/Library/Logs/grapheon/grapheon-stderr.log",
+        "stdout_path": "/Users/kooshapari/Library/Logs/grapheon/grapheon-stdout.log",
+        "working_directory": "/Users/kooshapari/CodeProjects/Phenotype/Data/grapheon"
+      },
+      "source_bytes": 81,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenotype.grapheon.plist",
+      "source_sha256": "eb77db653cb25dbf98b456f729db994d5806c719e8e8ca451683a9865ff2743d",
+      "unknown_environment_names": [
+        "DISPLAY",
+        "SSH_AUTH_SOCK",
+        "XPC_SERVICE_NAME"
+      ],
+      "unknown_markers": [
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [
+        "PATH"
+      ],
+      "label": "com.phenotype.sharecli",
+      "loaded": {
+        "active_count": "1",
+        "last_exit_code": "(never exited)",
+        "program": "/Users/kooshapari/.cargo/bin/sharecli",
+        "runs": "1",
+        "state": "running",
+        "stderr_path": "/Users/kooshapari/.sharecli/sidecar.err",
+        "stdout_path": "/Users/kooshapari/.sharecli/sidecar.log",
+        "working_directory": "/Users/kooshapari/.sharecli"
+      },
+      "source_bytes": 106,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenotype.sharecli.plist",
+      "source_sha256": "076b6376e69bf45c3dee68feec925f5426edaa22a74df761b3efa4d787ca48a6",
+      "unknown_environment_names": [
+        "DISPLAY",
+        "SSH_AUTH_SOCK",
+        "XPC_SERVICE_NAME"
+      ],
+      "unknown_markers": [
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [
+        "PATH"
+      ],
+      "label": "com.phenotype.sharecli.session-watch",
+      "loaded": {
+        "active_count": "1",
+        "last_exit_code": "(never exited)",
+        "program": "/Users/kooshapari/.cargo/bin/sharecli",
+        "runs": "1",
+        "state": "running",
+        "stderr_path": "/tmp/sharecli-session-watch.err",
+        "stdout_path": "/tmp/sharecli-session-watch.log"
+      },
+      "source_bytes": 90,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenotype.sharecli.session-watch.plist",
+      "source_sha256": "debffdc48e90029110b1a699b1dd92b3b52a0f5afdfb7d432cdd05e276d49321",
+      "unknown_environment_names": [
+        "DISPLAY",
+        "SSH_AUTH_SOCK",
+        "XPC_SERVICE_NAME"
+      ],
+      "unknown_markers": [
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    },
+    {
+      "allowlisted_environment_names": [
+        "DATABASE_URL",
+        "PATH",
+        "TRACERA_BIND_ADDR"
+      ],
+      "label": "com.phenotype.tracera-server",
+      "loaded": {
+        "active_count": "1",
+        "last_exit_code": "(never exited)",
+        "program": "/Users/kooshapari/Applications/Tracera-secured-0.1.0-2385471bd.app/Contents/Resources/tracera-server",
+        "runs": "1",
+        "state": "running",
+        "stderr_path": "/Users/kooshapari/Library/Logs/tracera-server.error.log",
+        "stdout_path": "/Users/kooshapari/Library/Logs/tracera-server.log",
+        "working_directory": "/Users/kooshapari/Library/Application Support/Tracera"
+      },
+      "source_bytes": 111,
+      "source_exists": true,
+      "source_path": "/Users/kooshapari/Library/LaunchAgents/com.phenotype.tracera-server.plist",
+      "source_sha256": "c35e166c12a259c268311dd058555413c45acb0d68371f0a129017f148780b31",
+      "unknown_environment_names": [
+        "DISPLAY",
+        "SSH_AUTH_SOCK",
+        "XPC_SERVICE_NAME"
+      ],
+      "unknown_markers": [
+        "plist_xml_validity",
+        "secret_values",
+        "source_loaded_parity"
+      ]
+    }
+  ],
+  "observed_at": "2026-08-06T09:15:58Z",
+  "repository": "KooshaPari/airlock",
+  "schema": "phenotype.airlock.launchagent-evidence.v1",
+  "scope": "redacted evidence only; no XML, secret values, reload, or install action",
+  "unknown_markers": [
+    "secret_values_omitted",
+    "launchctl_is_runtime_observation",
+    "manifest_does_not_authorize_promotion"
+  ]
+}
+
