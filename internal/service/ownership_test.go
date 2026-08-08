@@ -173,3 +173,50 @@ func TestUninstallArtifactsRefusesMissingManagedArtifact(t *testing.T) {
 	}
 }
 
+func TestInstallArtifactsRejectsMalformedExistingArtifact(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "airlock.plist"), []byte("[]"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := installArtifacts(root, []artifactSpec{{Name: "airlock.plist", Data: []byte("xml"), Mode: 0o644}}, testMetadata(), nil, nil, nil); err == nil || !strings.Contains(err.Error(), "unmanaged") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestInstallArtifactsRejectsUnsafeDuplicateAndIncompleteSpecs(t *testing.T) {
+	root := t.TempDir()
+	bad := []artifactSpec{{Name: "../escape", Data: []byte("x"), Mode: 0o644}}
+	if err := installArtifacts(root, bad, testMetadata(), nil, nil, nil); err == nil || !strings.Contains(err.Error(), "invalid artifact name") {
+		t.Fatalf("traversal error = %v", err)
+	}
+	dup := []artifactSpec{{Name: "a", Data: []byte("x"), Mode: 0o644}, {Name: "a", Data: []byte("y"), Mode: 0o644}}
+	if err := installArtifacts(root, dup, testMetadata(), nil, nil, nil); err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Fatalf("duplicate error = %v", err)
+	}
+}
+
+func TestVerifyLifecycleOwnershipChecksModeAndManifestCompleteness(t *testing.T) {
+	root := t.TempDir()
+	if err := installArtifacts(root, []artifactSpec{{Name: "a", Data: []byte("x"), Mode: 0o644}, {Name: "b", Data: []byte("y"), Mode: 0o600}}, testMetadata(), nil, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(filepath.Join(root, "a"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := verifyLifecycleOwnership(root, []string{"a", "b"}); err == nil || !strings.Contains(err.Error(), "changed") {
+		t.Fatalf("mode error = %v", err)
+	}
+}
+
+func TestInstallArtifactsRestoresRuntimeAfterActivationFailure(t *testing.T) {
+	root := t.TempDir()
+	if err := installArtifacts(root, []artifactSpec{testArtifact("old")}, testMetadata(), nil, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	deactivated, restored := false, false
+	want := errors.New("activation failed")
+	err := installArtifacts(root, []artifactSpec{testArtifact("new")}, testMetadata(), func() error { return want }, func() error { deactivated = true; return nil }, func() error { restored = true; return nil })
+	if !errors.Is(err, want) || !deactivated || !restored {
+		t.Fatalf("err=%v deactivated=%v restored=%v", err, deactivated, restored)
+	}
+}

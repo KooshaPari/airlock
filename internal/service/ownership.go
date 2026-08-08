@@ -79,7 +79,13 @@ func verifyLifecycleOwnership(root string, names []string) error {
 	}
 	owned := make(map[string]lifecycleFile, len(m.Files))
 	for _, f := range m.Files {
+		if _, duplicate := owned[f.Name]; duplicate {
+			return fmt.Errorf("duplicate manifest artifact %s", f.Name)
+		}
 		owned[f.Name] = f
+	}
+	if len(owned) != len(names) {
+		return fmt.Errorf("lifecycle manifest artifact set is incomplete")
 	}
 	for _, name := range names {
 		expected, ok := owned[name]
@@ -93,7 +99,7 @@ func verifyLifecycleOwnership(root string, names []string) error {
 		if err != nil {
 			return err
 		}
-		if got.SHA256 != expected.SHA256 || got.Inode != expected.Inode {
+		if got.SHA256 != expected.SHA256 || got.Inode != expected.Inode || got.Mode != expected.Mode {
 			return fmt.Errorf("managed artifact %s changed", name)
 		}
 	}
@@ -121,20 +127,26 @@ func atomicWrite(path string, data []byte, mode os.FileMode) error {
 	return os.Rename(tmpName, path)
 }
 
-func installArtifacts(root string, specs []artifactSpec, meta lifecycleMetadata, activate func() error, deactivate func() error) error {
+func installArtifacts(root string, specs []artifactSpec, meta lifecycleMetadata, activate func() error, deactivate func() error, restore ...func() error) error {
+	seen := make(map[string]struct{}, len(specs))
+	for _, s := range specs {
+		if s.Name == "" || filepath.Base(s.Name) != s.Name || s.Name == lifecycleManifestName {
+			return fmt.Errorf("invalid artifact name %q", s.Name)
+		}
+		if _, ok := seen[s.Name]; ok {
+			return fmt.Errorf("duplicate artifact name %q", s.Name)
+		}
+		seen[s.Name] = struct{}{}
+	}
 	manifestPath := filepath.Join(root, lifecycleManifestName)
 	oldManifest, manifestErr := os.ReadFile(manifestPath)
 	if manifestErr != nil && !errors.Is(manifestErr, os.ErrNotExist) {
 		return manifestErr
 	}
 	if errors.Is(manifestErr, os.ErrNotExist) {
-		entries, err := os.ReadDir(root)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		if len(entries) != 0 {
-			return fmt.Errorf("unmanaged files present")
-		}
+		// The root may be a shared LaunchAgents/systemd directory. Only an
+		// existing target artifact is a takeover candidate; unrelated entries
+		// must remain untouched.
 	}
 	var oldFiles = map[string][]byte{}
 	var oldModes = map[string]os.FileMode{}
@@ -143,6 +155,9 @@ func installArtifacts(root string, specs []artifactSpec, meta lifecycleMetadata,
 		p := filepath.Join(root, s.Name)
 		b, err := os.ReadFile(p)
 		if err == nil {
+			if manifestErr != nil {
+				return fmt.Errorf("unmanaged artifact %s present", s.Name)
+			}
 			oldFiles[s.Name] = b
 			info, _ := os.Stat(p)
 			oldModes[s.Name] = info.Mode().Perm()
@@ -204,8 +219,17 @@ func installArtifacts(root string, specs []artifactSpec, meta lifecycleMetadata,
 		return err
 	}
 	if activate != nil {
+		if deactivate != nil {
+			if err := deactivate(); err != nil {
+				rollback()
+				return err
+			}
+		}
 		if err := activate(); err != nil {
 			rollback()
+			if len(restore) > 0 && restore[0] != nil {
+				_ = restore[0]()
+			}
 			return err
 		}
 	}

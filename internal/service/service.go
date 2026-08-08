@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // launchdLabel is the launchd label for the v2 daemon. It deliberately matches
@@ -154,18 +155,15 @@ func installDarwin() error {
 	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		return fmt.Errorf("create LaunchAgents dir: %w", err)
 	}
-	if err := os.WriteFile(plistPath, []byte(plist), 0o644); err != nil {
-		return fmt.Errorf("write plist: %w", err)
-	}
-
-	// Port handover: best-effort unload of any prior v1 agents (pre-rename and
-	// renamed) before loading the new one. Unloading a non-loaded agent is not
-	// fatal, so errors here are ignored.
-	_ = runCmd("launchctl", "unload", oldPlistPath)
-	_ = runCmd("launchctl", "unload", plistPath)
-
-	if err := runCmd("launchctl", "load", plistPath); err != nil {
-		return fmt.Errorf("launchctl load %s: %w", plistPath, err)
+	if err := installArtifacts(agentsDir, []artifactSpec{{Name: launchdLabel + ".plist", Data: []byte(plist), Mode: 0o644}}, lifecycleMetadata{Source: bin, Version: "go", InstalledAt: time.Now().UTC().Format(time.RFC3339)}, func() error { return runCmd("launchctl", "load", plistPath) }, func() error {
+		_ = runCmd("launchctl", "unload", oldPlistPath)
+		_ = runCmd("launchctl", "unload", plistPath)
+		return nil
+	}, func() error {
+		_ = runCmd("launchctl", "unload", plistPath)
+		return runCmd("launchctl", "load", plistPath)
+	}); err != nil {
+		return fmt.Errorf("install plist: %w", err)
 	}
 
 	fmt.Printf("Installed launchd agent: %s\n", plistPath)
@@ -189,8 +187,7 @@ func uninstallDarwin() error {
 		return nil
 	}
 
-	_ = runCmd("launchctl", "unload", plistPath)
-	if err := os.Remove(plistPath); err != nil && !os.IsNotExist(err) {
+	if err := uninstallArtifacts(filepath.Join(home, "Library", "LaunchAgents"), []string{launchdLabel + ".plist"}, func() error { _ = runCmd("launchctl", "unload", plistPath); return nil }); err != nil {
 		return fmt.Errorf("remove plist: %w", err)
 	}
 	fmt.Printf("Removed launchd agent: %s\n", plistPath)
@@ -220,12 +217,16 @@ func installLinux() error {
 	if err := os.MkdirAll(unitDir, 0o755); err != nil {
 		return fmt.Errorf("create systemd user dir: %w", err)
 	}
-	if err := os.WriteFile(unitPath, []byte(unit), 0o644); err != nil {
-		return fmt.Errorf("write unit: %w", err)
+	var activate func() error
+	if _, lookErr := exec.LookPath("systemctl"); lookErr == nil {
+		activate = func() error { return runCmd("systemctl", "--user", "daemon-reload") }
+	}
+	if err := installArtifacts(unitDir, []artifactSpec{{Name: systemdUnitName, Data: []byte(unit), Mode: 0o644}}, lifecycleMetadata{Source: bin, Version: "go", InstalledAt: time.Now().UTC().Format(time.RFC3339)}, activate, nil); err != nil {
+		return fmt.Errorf("install unit: %w", err)
 	}
 
 	// If systemctl is missing, the unit is written but cannot be activated by us.
-	if _, err := exec.LookPath("systemctl"); err != nil {
+	if activate == nil {
 		fmt.Printf("Wrote systemd unit: %s\n", unitPath)
 		fmt.Println("systemctl was not found, so the service was not started automatically.")
 		fmt.Println("Start the daemon yourself with: airlock daemon")
@@ -253,6 +254,7 @@ func uninstallLinux() error {
 		return fmt.Errorf("resolve home dir: %w", err)
 	}
 	unitPath := filepath.Join(home, ".config", "systemd", "user", systemdUnitName)
+	unitDir := filepath.Dir(unitPath)
 
 	if dryRun() {
 		fmt.Printf("[dry-run] would run: systemctl --user disable --now %s\n", systemdUnitName)
@@ -263,7 +265,7 @@ func uninstallLinux() error {
 	if _, err := exec.LookPath("systemctl"); err == nil {
 		_ = runCmd("systemctl", "--user", "disable", "--now", systemdUnitName)
 	}
-	if err := os.Remove(unitPath); err != nil && !os.IsNotExist(err) {
+	if err := uninstallArtifacts(unitDir, []string{systemdUnitName}, nil); err != nil {
 		return fmt.Errorf("remove unit: %w", err)
 	}
 	fmt.Printf("Removed systemd user unit: %s\n", unitPath)
